@@ -1,4 +1,4 @@
-# gcp-petstore
+# gcp-petstore.
 
 ## Starting up
 
