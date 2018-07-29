@@ -14,20 +14,20 @@ import (
 )
 
 type Settings struct {
-	HealthyStatus          string
-	CrashOnRequest         bool
-	CrashAfterTime         int
-	CrashTimeRandomSeconds int
+	HealthyStatus  string
+	CrashOnRequest bool
+	CrashTimerMin  int
+	CrashTimerMax  int
 }
 
 var settings Settings
 
 func loadSettings() {
 	settings = Settings{
-		HealthyStatus:          "Healthy",
-		CrashOnRequest:         false,
-		CrashAfterTime:         -1,
-		CrashTimeRandomSeconds: 60,
+		HealthyStatus:  "Healthy",
+		CrashOnRequest: false,
+		CrashTimerMin:  -1,
+		CrashTimerMax:  60,
 	}
 	if len(os.Getenv("PETSTORE_FAIL")) != 0 {
 		settings.HealthyStatus = "Unhealthy"
@@ -35,10 +35,16 @@ func loadSettings() {
 	if len(os.Getenv("PETSTORE_CRASH")) != 0 {
 		settings.CrashOnRequest = true
 	}
-	if len(os.Getenv("PETSTORE_CRASH_AFTER_TIME")) != 0 {
-		i, err := strconv.Atoi(os.Getenv("PETSTORE_CRASH_AFTER_TIME"))
+	if len(os.Getenv("PETSTORE_CRASHTIMER_MIN")) != 0 {
+		i, err := strconv.Atoi(os.Getenv("PETSTORE_CRASHTIMER_MIN"))
 		if err == nil {
-			settings.CrashAfterTime = i
+			settings.CrashTimerMin = i
+		}
+	}
+	if len(os.Getenv("PETSTORE_CRASHTIMER_MAX")) != 0 {
+		i, err := strconv.Atoi(os.Getenv("PETSTORE_CRASHTIMER_MAX"))
+		if err == nil {
+			settings.CrashTimerMax = i
 		}
 	}
 }
@@ -64,25 +70,29 @@ func healthcheck(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, fmt.Sprintf(string(json[:])))
 }
 
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	loadSettings()
+
+	if settings.CrashTimerMin > -1 {
+		randomSeconds := rand.Intn(settings.CrashTimerMax - settings.CrashTimerMin)
+		fmt.Printf("Crashing randomly in %d second(s)...\n", settings.CrashTimerMin+randomSeconds)
+		timer1 := time.NewTimer(time.Duration(settings.CrashTimerMin+randomSeconds) * time.Second)
+
+		go func() {
+			<-timer1.C
+			fmt.Println("\nCrash timer expired")
+			os.Exit(1)
+		}()
+	}
+}
+
 func main() {
 	var port int
 
 	flag.IntVar(&port, "port", 8080, "port number")
 	flag.Parse()
-
-	loadSettings()
-
-	if settings.CrashAfterTime > -1 {
-		timer1 := time.NewTimer(settings.CrashAfterTime * time.Second)
-		go func() {
-			<-timer1.C
-			randomSeconds := rand.Intn(settings.CrashTimeRandomSeconds)
-			fmt.Printf("\nCrash timer expired, starting random timer of %d seconds...", randomSeconds)
-			time.Sleep(time.Duration(settings.CrashAfterTime+randomSeconds) * time.Second)
-			fmt.Println("\nTimer expired, crashing...")
-			os.Exit(1)
-		}()
-	}
 
 	fmt.Printf("Starting server on port %d...", port)
 	http.HandleFunc("/", hello)
