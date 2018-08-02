@@ -1,6 +1,25 @@
 # gcp-petstore
 
-## Starting up
+## Application options
+
+### Command line arguments
+
+- `-port int` port number (default `8080`)
+
+### Environment variables for settings
+
+- `PETSTORE_FAIL` cause the app to report "Unhealthy" (defaults to healthy)
+- `PETSTORE_CRASH` crash the app on first request (defaults to false)
+- `PETSTORE_CRASHTIMER_MIN` - `PETSTORE_CRASHTIMER_MAX`
+Specifies a range for a random timer which crashes when time is up (defaults to `-1` to deactivate)
+
+## Running locally
+
+The Dockerfile is tailored to using Google Cloud Build, but if you have `go` installed you can try it locally with:
+
+    go run main.go
+
+## Starting up in-cloud
 
 ### Attaching to a GCP project
 
@@ -22,18 +41,19 @@ And set your project to match GCP configuration, where `[PROJECT_ID]` is your GC
 
 You need `container-builder-local` installed, and will need to provide some environment vars and/or substitutions.
 
-#### Environment Vars:
+#### Environment Variables for local invocation
 
 - `PROJECT_ID` should be your GCP Project Id
+- `REPO_URL` specify an alternate repository (not active)
 
 #### Example invocation
 
-        PROJECT_ID=[PROJECT_ID] \
-        REPO_URL="https://github.com/crccheck/docker-hello-world.git" \
-            container-builder-local \
-            --dryrun=false \
-            --substitutions _REPO_URL=$REPO_URL,_SHOULD_RUN_IMAGE=1 \
-            .
+    PROJECT_ID=[PROJECT_ID] \
+    REPO_URL="https://github.com/gcp-spikers/gcp-petstore.git" \
+        container-builder-local \
+        --dryrun=false \
+        --substitutions _REPO_URL=$REPO_URL,_SHOULD_RUN_IMAGE=1 \
+        .
 
   
 
